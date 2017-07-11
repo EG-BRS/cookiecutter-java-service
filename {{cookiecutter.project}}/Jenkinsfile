@@ -1,0 +1,62 @@
+
+node { 
+    def build;
+    def buildVersion = env.BUILD_NUMBER;
+    def version;
+
+    stage('Checkout') {
+        checkout scm
+        build = readYaml file: "build.yml";
+	version = "${build.majorVersion}.${build.minorVersion}.$buildVersion"
+    }
+
+    stage('Build') {
+        withMaven(
+            maven: 'Maven 3',
+            mavenSettingsConfig: 'maven_settings',
+            jdk: 'JDK 8') {
+
+            // Force version and artifactid
+            def pom = readMavenPom file: 'pom.xml'
+            pom.artifactId = build.name;
+   	    pom.name = build.name;
+
+            writeMavenPom model: pom
+
+            sh "mvn versions:set -DnewVersion=${version}"
+
+            // Run the maven build
+            sh "mvn clean install"
+        }
+    }
+
+    if(env.BRANCH_NAME == "master") {
+        stage('SonarQube analysis') {
+            // requires SonarQube Scanner 2.8+
+            def scannerHome = tool 'SonarQube Scanner 2.8';
+            withSonarQubeEnv('SonarQube Server') {
+                withMaven(maven: 'Maven 3',
+                        mavenSettingsConfig: 'maven_settings',
+                        jdk: 'JDK 8') {
+                    sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.2:sonar'
+                }
+            }
+        }
+
+        stage('Tag it') {
+            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'github_credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
+                sh("git config user.email ci@codezoo.dk")
+    		sh("git config user.name 'CI'")
+		sh("git tag -a ${version} -m 'Jenkins tagged new build'")
+              sh('git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/CodeZooDK/' + build.name + '.git --tags')
+            }
+        }
+
+        stage('Package') {
+            sh "mv target/${build.name}.jar app.jar"
+            docker.withRegistry("https://index.docker.io/v1/", "docker_credentials") {
+                docker.build("codezoo/${build.name}:${version}").push()
+            }
+        }
+    }
+}

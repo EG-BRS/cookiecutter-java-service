@@ -1,0 +1,3 @@
+name: {{cookiecutter.project_name}}
+majorVersion: '{{cookiecutter.major_version}}'
+minorVersion: '{{cookiecutter.minor_version}}'
