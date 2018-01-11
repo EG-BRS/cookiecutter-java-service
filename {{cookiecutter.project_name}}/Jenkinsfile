@@ -48,7 +48,7 @@ node {
                 sh("git config user.email ci@codezoo.dk")
     		sh("git config user.name 'CI'")
 		sh("git tag -a ${version} -m 'Jenkins tagged new build'")
-              sh('git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/CodeZooDK/' + build.name + '.git --tags')
+              sh('git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/CodeZooDK/' + build.gitName + '.git --tags')
             }
         }
 
