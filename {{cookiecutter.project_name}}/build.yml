@@ -1,3 +1,4 @@
 name: {{cookiecutter.project_name}}
+gitName: {{cookiecutter.git_name}}
 majorVersion: '{{cookiecutter.major_version}}'
 minorVersion: '{{cookiecutter.minor_version}}'
