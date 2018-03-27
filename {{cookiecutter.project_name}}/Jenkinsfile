@@ -1,14 +1,6 @@
 
 node { 
-    def build;
-    def buildVersion = env.BUILD_NUMBER;
-    def version;
-
-    stage('Checkout') {
-        checkout scm
-        build = readYaml file: "build.yml";
-	version = "${build.majorVersion}.${build.minorVersion}.$buildVersion"
-    }
+    def buildDetails = checkoutWithDetails(buildNumber:env.BUILD_NUMBER)
 
     stage('Build') {
         withMaven(
@@ -43,20 +35,6 @@ node {
             }
         }
 
-        stage('Tag it') {
-            withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'github_credentials', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD']]) {
-                sh("git config user.email ci@codezoo.dk")
-    		sh("git config user.name 'CI'")
-		sh("git tag -a ${version} -m 'Jenkins tagged new build'")
-              sh('git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/EG-BRS/' + build.gitName + '.git --tags')
-            }
-        }
-
-        stage('Package') {
-            sh "mv target/${build.name}.jar app.jar"
-            docker.withRegistry("https://kalk1-on.azurecr.io", "KALK1_CONTAINER_REGISTRY") {
-                docker.build("kalk1-on.azurecr.io/${build.name}:${version}").push()
-            }
-        }
+        buildDockerImage(buildDetails)
     }
 }
