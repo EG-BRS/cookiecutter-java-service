@@ -1,6 +1,6 @@
 
 node { 
-    def buildDetails = checkoutWithDetails(buildNumber:env.BUILD_NUMBER)
+    def buildDetails = checkoutWithDetails(buildNumber:env.BUILD_NUMBER, branch: env.BRANCH_NAME)
 
     stage('Build') {
         withMaven(
@@ -34,7 +34,6 @@ node {
                 }
             }
         }
-
-        buildDockerImage(buildDetails)
     }
+    buildDockerImage(buildDetails)
 }
